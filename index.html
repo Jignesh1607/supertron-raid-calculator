@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RAID Storage Calculator</title>
+  <style>
+    :root {
+      --bg-fallback: #081b33;
+      --card-bg: rgba(15, 23, 42, 0.90);
+      --accent: #38bdf8;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      /* Dynamic Responsive Background Image */
+      background-color: var(--bg-fallback);
+      background-image: url('bg img.jpg');
+      background-size: cover;
+      background-position: center bottom;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 24px 16px;
+      box-sizing: border-box;
+    }
+
+    .calculator-card {
+      background-color: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      width: 100%;
+      max-width: 580px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Logo Styling (Increased Logo Size & Larger White Badge) */
+    .logo-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .logo-badge {
+      display: inline-block;
+      background-color: #ffffff;
+      padding: 12px 24px; /* Increased padding */
+      border-radius: 12px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    }
+
+    .header-logo {
+      max-width: 100%;
+      height: auto;
+      max-height: 100px; /* Increased from 75px for a larger logo */
+      display: block;
+      object-fit: contain;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 1.4rem;
+      color: var(--accent);
+      text-align: center;
+      margin-bottom: 20px;
+      letter-spacing: -0.01em;
+    }
+
+    /* Mode Selector Tabs */
+    .tab-group {
+      display: flex;
+      background-color: #0f172a;
+      border-radius: 8px;
+      padding: 4px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn.active {
+      background-color: var(--accent);
+      color: #0f172a;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    select, input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background-color: #0f172a;
+      color: var(--text);
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+
+    select:focus, input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .results {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .result-label {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .result-value {
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: var(--accent);
+    }
+
+    /* Recommendations List */
+    .recommendation-list {
+      max-height: 280px;
+      overflow-y: auto;
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .rec-item {
+      background-color: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .rec-drive {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .rec-qty {
+      font-size: 0.95rem;
+      color: var(--accent);
+      font-weight: bold;
+    }
+
+    .rec-usable {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .note {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 18px;
+      line-height: 1.4;
+      text-align: center;
+    }
+
+    /* Mobile Responsive Optimizations */
+    @media (max-width: 480px) {
+      body {
+        padding: 12px;
+        background-attachment: scroll;
+      }
+      .calculator-card {
+        padding: 20px;
+      }
+      .header-logo {
+        max-height: 80px; /* Slightly scaled down on small mobile screens */
+      }
+      .tab-btn {
+        font-size: 0.75rem;
+        padding: 8px 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="calculator-card">
+  <!-- Logo with White Background Badge -->
+  <div class="logo-container">
+    <div class="logo-badge">
+      <img src="Supertron-VAD-500-500-trans-logo.png" alt="Supertron Logo" class="header-logo" />
+    </div>
+  </div>
+
+  <h1>RAID Storage Calculator</h1>
+
+  <!-- Mode Switcher Tabs -->
+  <div class="tab-group">
+    <button class="tab-btn active" id="tabForward" onclick="switchMode('forward')">Calculate Usable Capacity</button>
+    <button class="tab-btn" id="tabReverse" onclick="switchMode('reverse')">Find Required Drives</button>
+  </div>
+
+  <!-- Drive Type Select -->
+  <div class="form-group">
+    <label for="driveType">Drive Type</label>
+    <select id="driveType">
+      <option value="sata_hdd">SATA HDD</option>
+      <option value="sata_ssd">SATA SSD</option>
+      <option value="nvme">NVMe SSD (M.2)</option>
+      <option value="nl_sas">NL-SAS HDD</option>
+      <option value="sas_ssd">SAS SSD</option>
+      <option value="u2_ssd">U.2 SSD</option>
+    </select>
+  </div>
+
+  <!-- Forward Mode Field: Drive Size -->
+  <div class="form-group" id="groupDriveSize">
+    <label for="driveSize">Drive Capacity</label>
+    <select id="driveSize"></select>
+  </div>
+
+  <!-- Forward Mode Field: Number of Drives -->
+  <div class="form-group" id="groupDriveCount">
+    <label for="driveCount">Number of Drives</label>
+    <input type="number" id="driveCount" value="8" min="1" max="128">
+  </div>
+
+  <!-- Reverse Mode Field: Target Capacity -->
+  <div class="form-group hidden" id="groupTargetCapacity">
+    <label for="targetCapacity">Target Usable Capacity (TB)</label>
+    <input type="number" id="targetCapacity" value="50" min="1" step="1">
+  </div>
+
+  <!-- RAID Level -->
+  <div class="form-group">
+    <label for="raidLevel">RAID Level</label>
+    <select id="raidLevel">
+      <option value="0">RAID 0 (Striping - No Redundancy)</option>
+      <option value="1">RAID 1 (Mirroring)</option>
+      <option value="5" selected>RAID 5 (Single Parity)</option>
+      <option value="6">RAID 6 (Dual Parity)</option>
+      <option value="10">RAID 10 (Striped Mirrors)</option>
+      <option value="50">RAID 50 (Distributed Parity)</option>
+      <option value="60">RAID 60 (Dual Distributed Parity)</option>
+    </select>
+  </div>
+
+  <!-- Hot Spares -->
+  <div class="form-group">
+    <label for="hotSpares">Hot Spares</label>
+    <input type="number" id="hotSpares" value="0" min="0" max="10">
+  </div>
+
+  <!-- Mode 1 Results -->
+  <div class="results" id="resultsForward">
+    <div class="result-row">
+      <span class="result-label">Raw Storage:</span>
+      <span class="result-value" id="rawCapacity">0 TB</span>
+    </div>
+    <div class="result-row">
+      <span class="result-label">Usable Capacity (0.9x):</span>
+      <span class="result-value" id="usableCapacity">0 TB</span>
+    </div>
+  </div>
+
+  <!-- Mode 2 Results -->
+  <div class="results hidden" id="resultsReverse">
+    <label>Recommended Configurations (Drive Size & Quantity):</label>
+    <div class="recommendation-list" id="recommendationsList"></div>
+  </div>
+
+  <p class="note">Usable Capacity Formula: <code>(Data Drives) * Drive Size * 0.9 Factor</code></p>
+</div>
+
+<script>
+  let currentMode = 'forward';
+
+  const capacityMappings = {
+    sata_hdd: [
+      { label: "750 GB", value: 750 }, { label: "1 TB", value: 1000 }, { label: "2 TB", value: 2000 },
+      { label: "3 TB", value: 3000 }, { label: "4 TB", value: 4000 }, { label: "5 TB", value: 5000 },
+      { label: "6 TB", value: 6000 }, { label: "8 TB", value: 8000 }, { label: "10 TB", value: 10000 },
+      { label: "12 TB", value: 12000 }, { label: "14 TB", value: 14000 }, { label: "16 TB", value: 16000 },
+      { label: "18 TB", value: 18000 }, { label: "20 TB", value: 20000 }, { label: "22 TB", value: 22000 },
+      { label: "24 TB", value: 24000 }, { label: "26 TB", value: 26000 }, { label: "28 TB", value: 28000 },
+      { label: "30 TB", value: 30000 }, { label: "32 TB", value: 32000 }
+    ],
+    sata_ssd: [
+      { label: "64 GB", value: 64 }, { label: "128 GB", value: 128 }, { label: "240 GB", value: 240 },
+      { label: "250 GB", value: 250 }, { label: "256 GB", value: 256 }, { label: "480 GB", value: 480 },
+      { label: "500 GB", value: 500 }, { label: "512 GB", value: 512 }, { label: "960 GB", value: 960 },
+      { label: "1 TB", value: 1000 }, { label: "1.92 TB", value: 1920 }, { label: "2 TB", value: 2000 },
+      { label: "3.84 TB", value: 3840 }, { label: "4 TB", value: 4000 }, { label: "7.68 TB", value: 7680 }
+    ],
+    nvme: [
+      { label: "256 GB", value: 256 }, { label: "512 GB", value: 512 }, { label: "1 TB", value: 1000 },
+      { label: "2 TB", value: 2000 }, { label: "4 TB", value: 4000 }, { label: "8 TB", value: 8000 }
+    ],
+    nl_sas: [
+      { label: "300 GB", value: 300 }, { label: "600 GB", value: 600 }, { label: "900 GB", value: 900 },
+      { label: "1.2 TB", value: 1200 }, { label: "1.8 TB", value: 1800 }, { label: "2 TB", value: 2000 },
+      { label: "2.4 TB", value: 2400 }, { label: "4 TB", value: 4000 }, { label: "6 TB", value: 6000 },
+      { label: "8 TB", value: 8000 }, { label: "10 TB", value: 10000 }, { label: "12 TB", value: 12000 },
+      { label: "14 TB", value: 14000 }, { label: "16 TB", value: 16000 }, { label: "18 TB", value: 18000 },
+      { label: "20 TB", value: 20000 }, { label: "22 TB", value: 22000 }, { label: "24 TB", value: 24000 },
+      { label: "26 TB", value: 26000 }
+    ],
+    sas_ssd: [
+      { label: "400 GB", value: 400 }, { label: "800 GB", value: 800 }, { label: "960 GB", value: 960 },
+      { label: "1.6 TB", value: 1600 }, { label: "1.92 TB", value: 1920 }, { label: "3.2 TB", value: 3200 },
+      { label: "3.84 TB", value: 3840 }, { label: "6.4 TB", value: 6400 }, { label: "7.68 TB", value: 7680 },
+      { label: "12.8 TB", value: 12800 }, { label: "15.36 TB", value: 15360 }, { label: "30.72 TB", value: 30720 }
+    ],
+    u2_ssd: [
+      { label: "960 GB", value: 960 }, { label: "1.92 TB", value: 1920 }, { label: "3.84 TB", value: 3840 },
+      { label: "7.68 TB", value: 7680 }, { label: "15.36 TB", value: 15360 }, { label: "30.72 TB", value: 30720 }
+    ]
+  };
+
+  function switchMode(mode) {
+    currentMode = mode;
+    document.getElementById('tabForward').classList.toggle('active', mode === 'forward');
+    document.getElementById('tabReverse').classList.toggle('active', mode === 'reverse');
+
+    document.getElementById('groupDriveSize').classList.toggle('hidden', mode === 'reverse');
+    document.getElementById('groupDriveCount').classList.toggle('hidden', mode === 'reverse');
+    document.getElementById('groupTargetCapacity').classList.toggle('hidden', mode === 'forward');
+
+    document.getElementById('resultsForward').classList.toggle('hidden', mode === 'reverse');
+    document.getElementById('resultsReverse').classList.toggle('hidden', mode === 'forward');
+
+    recalculate();
+  }
+
+  function updateCapacityDropdown() {
+    const selectedType = document.getElementById('driveType').value;
+    const sizeSelect = document.getElementById('driveSize');
+    const options = capacityMappings[selectedType] || [];
+
+    sizeSelect.innerHTML = '';
+    options.forEach((opt, index) => {
+      const option = document.createElement('option');
+      option.value = opt.value;
+      option.textContent = opt.label;
+      if (index === Math.floor(options.length / 2)) {
+        option.selected = true;
+      }
+      sizeSelect.appendChild(option);
+    });
+
+    recalculate();
+  }
+
+  function recalculate() {
+    if (currentMode === 'forward') {
+      calculateForwardRAID();
+    } else {
+      calculateReverseRAID();
+    }
+  }
+
+  function getMinDrivesAndOverhead(raidLevel, totalDrives) {
+    let overhead = 0;
+    let minDrives = 1;
+    let valid = true;
+
+    switch (raidLevel) {
+      case '0':
+        overhead = 0;
+        minDrives = 1;
+        break;
+      case '1':
+        overhead = totalDrives / 2;
+        minDrives = 2;
+        if (totalDrives % 2 !== 0) valid = false;
+        break;
+      case '5':
+        overhead = 1;
+        minDrives = 3;
+        break;
+      case '6':
+        overhead = 2;
+        minDrives = 4;
+        break;
+      case '10':
+        overhead = totalDrives / 2;
+        minDrives = 4;
+        if (totalDrives % 2 !== 0) valid = false;
+        break;
+      case '50':
+        overhead = 2;
+        minDrives = 6;
+        break;
+      case '60':
+        overhead = 4;
+        minDrives = 8;
+        break;
+    }
+
+    if (totalDrives < minDrives) valid = false;
+    return { overhead, minDrives, valid };
+  }
+
+  function calculateForwardRAID() {
+    const driveSize = parseFloat(document.getElementById('driveSize').value) || 0;
+    const driveCount = parseInt(document.getElementById('driveCount').value) || 0;
+    const raidLevel = document.getElementById('raidLevel').value;
+    const hotSpares = parseInt(document.getElementById('hotSpares').value) || 0;
+
+    const { overhead, valid } = getMinDrivesAndOverhead(raidLevel, driveCount);
+    const availableDrives = driveCount - overhead - hotSpares;
+
+    if (!valid || availableDrives <= 0) {
+      document.getElementById('rawCapacity').innerText = "Invalid Config";
+      document.getElementById('usableCapacity').innerText = "Invalid Config";
+      return;
+    }
+
+    const rawGB = driveCount * driveSize;
+    const usableGB = availableDrives * driveSize * 0.9;
+
+    document.getElementById('rawCapacity').innerText = formatStorage(rawGB);
+    document.getElementById('usableCapacity').innerText = formatStorage(usableGB);
+  }
+
+  function calculateReverseRAID() {
+    const selectedType = document.getElementById('driveType').value;
+    const targetUsableTB = parseFloat(document.getElementById('targetCapacity').value) || 0;
+    const targetUsableGB = targetUsableTB * 1000;
+    const raidLevel = document.getElementById('raidLevel').value;
+    const hotSpares = parseInt(document.getElementById('hotSpares').value) || 0;
+
+    const listContainer = document.getElementById('recommendationsList');
+    listContainer.innerHTML = '';
+
+    if (targetUsableTB <= 0) {
+      listContainer.innerHTML = '<div class="rec-item">Enter a valid target capacity.</div>';
+      return;
+    }
+
+    const availableDriveSizes = capacityMappings[selectedType] || [];
+    let recommendations = [];
+
+    availableDriveSizes.forEach(opt => {
+      const driveSize = opt.value;
+      
+      for (let driveCount = 1; driveCount <= 96; driveCount++) {
+        const { overhead, valid } = getMinDrivesAndOverhead(raidLevel, driveCount);
+        if (!valid) continue;
+
+        const dataDrives = driveCount - overhead - hotSpares;
+        if (dataDrives <= 0) continue;
+
+        const usableGB = dataDrives * driveSize * 0.9;
+        if (usableGB >= targetUsableGB) {
+          recommendations.push({
+            driveLabel: opt.label,
+            totalDrives: driveCount,
+            dataDrives: dataDrives,
+            usableGB: usableGB
+          });
+          break;
+        }
+      }
+    });
+
+    if (recommendations.length === 0) {
+      listContainer.innerHTML = '<div class="rec-item">No valid drive configuration found. Try reducing target size or hot spares.</div>';
+      return;
+    }
+
+    recommendations.forEach(rec => {
+      const item = document.createElement('div');
+      item.className = 'rec-item';
+      item.innerHTML = `
+        <div>
+          <div class="rec-drive">${rec.driveLabel} Drive</div>
+          <div class="rec-usable">Usable: ${formatStorage(rec.usableGB)}</div>
+        </div>
+        <div style="text-align: right;">
+          <div class="rec-qty">${rec.totalDrives} Drives</div>
+          <div class="rec-usable">${rec.dataDrives} Data + ${rec.totalDrives - rec.dataDrives} Redundancy/Spare</div>
+        </div>
+      `;
+      listContainer.appendChild(item);
+    });
+  }
+
+  function formatStorage(sizeInGB) {
+    if (sizeInGB >= 1000) {
+      return (sizeInGB / 1000).toFixed(2) + " TB";
+    }
+    return sizeInGB.toFixed(0) + " GB";
+  }
+
+  // Event Listeners
+  document.getElementById('driveType').addEventListener('change', () => {
+    updateCapacityDropdown();
+    recalculate();
+  });
+
+  ['driveSize', 'driveCount', 'targetCapacity', 'raidLevel', 'hotSpares'].forEach(id => {
+    document.getElementById(id).addEventListener('change', recalculate);
+    document.getElementById(id).addEventListener('input', recalculate);
+  });
+
+  updateCapacityDropdown();
+</script>
+
+</body>
+</html>
