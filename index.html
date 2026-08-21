@@ -3,12 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>RAID Storage Calculator</title>
+  <title>RAID Storage Calculator with Hybrid Cache</title>
   <style>
     :root {
       --bg-fallback: #081b33;
       --card-bg: rgba(15, 23, 42, 0.90);
       --accent: #38bdf8;
+      --accent-hdd: #ff9100;
+      --accent-ssd: #00e676;
       --text: #f8fafc;
       --text-muted: #94a3b8;
       --border: #334155;
@@ -16,7 +18,6 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      /* Dynamic Responsive Background Image */
       background-color: var(--bg-fallback);
       background-image: url('bg img.jpg');
       background-size: cover;
@@ -41,11 +42,10 @@
       border-radius: 16px;
       padding: 28px;
       width: 100%;
-      max-width: 580px;
+      max-width: 620px;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
     }
 
-    /* Logo Styling (Increased Logo Size & Larger White Badge) */
     .logo-container {
       text-align: center;
       margin-bottom: 20px;
@@ -54,7 +54,7 @@
     .logo-badge {
       display: inline-block;
       background-color: #ffffff;
-      padding: 12px 24px; /* Increased padding */
+      padding: 12px 24px;
       border-radius: 12px;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
     }
@@ -62,7 +62,7 @@
     .header-logo {
       max-width: 100%;
       height: auto;
-      max-height: 100px; /* Increased from 75px for a larger logo */
+      max-height: 100px;
       display: block;
       object-fit: contain;
     }
@@ -76,7 +76,6 @@
       letter-spacing: -0.01em;
     }
 
-    /* Mode Selector Tabs */
     .tab-group {
       display: flex;
       background-color: #0f172a;
@@ -92,7 +91,7 @@
       border: none;
       background: none;
       color: var(--text-muted);
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: 600;
       cursor: pointer;
       border-radius: 6px;
@@ -131,6 +130,26 @@
       border-color: var(--accent);
     }
 
+    .split-bar-container {
+      background: #070d19;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .split-bar {
+      height: 20px;
+      border-radius: 6px;
+      display: flex;
+      overflow: hidden;
+      margin-top: 8px;
+      background: #1e293b;
+    }
+
+    .bar-hdd { background: var(--accent-hdd); height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #000; font-weight: bold; transition: width 0.3s; }
+    .bar-ssd { background: var(--accent-ssd); height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #000; font-weight: bold; transition: width 0.3s; }
+
     .results {
       margin-top: 24px;
       padding-top: 20px;
@@ -155,41 +174,59 @@
       color: var(--accent);
     }
 
-    /* Recommendations List */
-    .recommendation-list {
-      max-height: 280px;
-      overflow-y: auto;
-      margin-top: 12px;
+    .hybrid-card {
+      background-color: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
+      border-left: 4px solid var(--accent-hdd);
+    }
+
+    .hybrid-card.ssd {
+      border-left-color: var(--accent-ssd);
+    }
+
+    .hybrid-header {
+      font-weight: bold;
+      font-size: 0.95rem;
+      margin-bottom: 8px;
       display: flex;
-      flex-direction: column;
-      gap: 10px;
+      justify-content: space-between;
+    }
+
+    /* Added Scrollable Containers */
+    .scrollable-list {
+      max-height: 220px;
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+
+    /* Custom Scrollbar Styling */
+    .scrollable-list::-webkit-scrollbar {
+      width: 6px;
+    }
+    .scrollable-list::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 4px;
+    }
+    .scrollable-list::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+    .scrollable-list::-webkit-scrollbar-thumb:hover {
+      background: var(--accent);
     }
 
     .rec-item {
       background-color: #0f172a;
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 12px 16px;
+      padding: 10px 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-    }
-
-    .rec-drive {
-      font-weight: 600;
-      color: var(--text);
-    }
-
-    .rec-qty {
-      font-size: 0.95rem;
-      color: var(--accent);
-      font-weight: bold;
-    }
-
-    .rec-usable {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      margin-top: 4px;
+      margin-bottom: 8px;
     }
 
     .hidden {
@@ -204,29 +241,16 @@
       text-align: center;
     }
 
-    /* Mobile Responsive Optimizations */
     @media (max-width: 480px) {
-      body {
-        padding: 12px;
-        background-attachment: scroll;
-      }
-      .calculator-card {
-        padding: 20px;
-      }
-      .header-logo {
-        max-height: 80px; /* Slightly scaled down on small mobile screens */
-      }
-      .tab-btn {
-        font-size: 0.75rem;
-        padding: 8px 4px;
-      }
+      body { padding: 12px; }
+      .calculator-card { padding: 20px; }
+      .tab-btn { font-size: 0.7rem; padding: 8px 2px; }
     }
   </style>
 </head>
 <body>
 
 <div class="calculator-card">
-  <!-- Logo with White Background Badge -->
   <div class="logo-container">
     <div class="logo-badge">
       <img src="Supertron-VAD-500-500-trans-logo.png" alt="Supertron Logo" class="header-logo" />
@@ -237,43 +261,59 @@
 
   <!-- Mode Switcher Tabs -->
   <div class="tab-group">
-    <button class="tab-btn active" id="tabForward" onclick="switchMode('forward')">Calculate Usable Capacity</button>
-    <button class="tab-btn" id="tabReverse" onclick="switchMode('reverse')">Find Required Drives</button>
+    <button class="tab-btn active" id="tabForward" onclick="switchMode('forward')">Usable Capacity</button>
+    <button class="tab-btn" id="tabReverse" onclick="switchMode('reverse')">Required Drives</button>
+    <button class="tab-btn" id="tabHybrid" onclick="switchMode('hybrid')">Hybrid Cache (20% SSD)</button>
   </div>
 
   <!-- Drive Type Select -->
-  <div class="form-group">
+  <div class="form-group" id="groupDriveType">
     <label for="driveType">Drive Type</label>
     <select id="driveType">
       <option value="sata_hdd">SATA HDD</option>
       <option value="sata_ssd">SATA SSD</option>
       <option value="nvme">NVMe SSD (M.2)</option>
-      <option value="nl_sas">NL-SAS HDD</option>
+      <option value="nl_sas" selected>NL-SAS HDD</option>
       <option value="sas_ssd">SAS SSD</option>
       <option value="u2_ssd">U.2 SSD</option>
     </select>
   </div>
 
-  <!-- Forward Mode Field: Drive Size -->
+  <!-- Inputs -->
   <div class="form-group" id="groupDriveSize">
     <label for="driveSize">Drive Capacity</label>
     <select id="driveSize"></select>
   </div>
 
-  <!-- Forward Mode Field: Number of Drives -->
   <div class="form-group" id="groupDriveCount">
     <label for="driveCount">Number of Drives</label>
     <input type="number" id="driveCount" value="8" min="1" max="128">
   </div>
 
-  <!-- Reverse Mode Field: Target Capacity -->
   <div class="form-group hidden" id="groupTargetCapacity">
     <label for="targetCapacity">Target Usable Capacity (TB)</label>
     <input type="number" id="targetCapacity" value="50" min="1" step="1">
   </div>
 
+  <div class="form-group hidden" id="groupCachePercent">
+    <label for="cachePercent">Cache Percentage (%)</label>
+    <input type="number" id="cachePercent" value="20" min="1" max="50">
+  </div>
+
+  <!-- Split Bar -->
+  <div class="split-bar-container hidden" id="groupSplitBar">
+    <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:bold;">
+      <span>NL-SAS HDD Data Tier: <span id="hddTargetText" style="color:var(--accent-hdd);">40 TB</span></span>
+      <span>U.2 SSD Cache Tier: <span id="ssdTargetText" style="color:var(--accent-ssd);">10 TB</span></span>
+    </div>
+    <div class="split-bar">
+      <div id="barHdd" class="bar-hdd" style="width: 80%;">80% Data</div>
+      <div id="barSsd" class="bar-ssd" style="width: 20%;">20% Cache</div>
+    </div>
+  </div>
+
   <!-- RAID Level -->
-  <div class="form-group">
+  <div class="form-group" id="groupRaidLevel">
     <label for="raidLevel">RAID Level</label>
     <select id="raidLevel">
       <option value="0">RAID 0 (Striping - No Redundancy)</option>
@@ -286,8 +326,7 @@
     </select>
   </div>
 
-  <!-- Hot Spares -->
-  <div class="form-group">
+  <div class="form-group" id="groupHotSpares">
     <label for="hotSpares">Hot Spares</label>
     <input type="number" id="hotSpares" value="0" min="0" max="10">
   </div>
@@ -306,8 +345,29 @@
 
   <!-- Mode 2 Results -->
   <div class="results hidden" id="resultsReverse">
-    <label>Recommended Configurations (Drive Size & Quantity):</label>
-    <div class="recommendation-list" id="recommendationsList"></div>
+    <label style="margin-bottom:8px; display:block;">Recommended Configurations:</label>
+    <div class="scrollable-list" id="recommendationsList"></div>
+  </div>
+
+  <!-- Mode 3 Hybrid Results -->
+  <div class="results hidden" id="resultsHybrid">
+    <label style="margin-bottom:12px; display:block; font-weight:bold; color:var(--accent);">Required Drives for Hybrid Setup:</label>
+    
+    <div class="hybrid-card">
+      <div class="hybrid-header" style="color:var(--accent-hdd);">
+        <span>📦 Bulk Data Options (NL-SAS HDD)</span>
+        <span id="hybridHddRaidLabel">RAID 5</span>
+      </div>
+      <div class="scrollable-list" id="hybridHddResult">Calculating...</div>
+    </div>
+
+    <div class="hybrid-card ssd">
+      <div class="hybrid-header" style="color:var(--accent-ssd);">
+        <span>⚡ Cache Options (U.2 SSD)</span>
+        <span>RAID 1 / 10 Mirror</span>
+      </div>
+      <div class="scrollable-list" id="hybridSsdResult">Calculating...</div>
+    </div>
   </div>
 
   <p class="note">Usable Capacity Formula: <code>(Data Drives) * Drive Size * 0.9 Factor</code></p>
@@ -318,39 +378,29 @@
 
   const capacityMappings = {
     sata_hdd: [
-      { label: "750 GB", value: 750 }, { label: "1 TB", value: 1000 }, { label: "2 TB", value: 2000 },
-      { label: "3 TB", value: 3000 }, { label: "4 TB", value: 4000 }, { label: "5 TB", value: 5000 },
-      { label: "6 TB", value: 6000 }, { label: "8 TB", value: 8000 }, { label: "10 TB", value: 10000 },
-      { label: "12 TB", value: 12000 }, { label: "14 TB", value: 14000 }, { label: "16 TB", value: 16000 },
-      { label: "18 TB", value: 18000 }, { label: "20 TB", value: 20000 }, { label: "22 TB", value: 22000 },
-      { label: "24 TB", value: 24000 }, { label: "26 TB", value: 26000 }, { label: "28 TB", value: 28000 },
-      { label: "30 TB", value: 30000 }, { label: "32 TB", value: 32000 }
+      { label: "1 TB", value: 1000 }, { label: "2 TB", value: 2000 }, { label: "4 TB", value: 4000 },
+      { label: "8 TB", value: 8000 }, { label: "12 TB", value: 12000 }, { label: "16 TB", value: 16000 },
+      { label: "20 TB", value: 20000 }, { label: "24 TB", value: 24000 }
     ],
     sata_ssd: [
-      { label: "64 GB", value: 64 }, { label: "128 GB", value: 128 }, { label: "240 GB", value: 240 },
-      { label: "250 GB", value: 250 }, { label: "256 GB", value: 256 }, { label: "480 GB", value: 480 },
-      { label: "500 GB", value: 500 }, { label: "512 GB", value: 512 }, { label: "960 GB", value: 960 },
-      { label: "1 TB", value: 1000 }, { label: "1.92 TB", value: 1920 }, { label: "2 TB", value: 2000 },
-      { label: "3.84 TB", value: 3840 }, { label: "4 TB", value: 4000 }, { label: "7.68 TB", value: 7680 }
+      { label: "480 GB", value: 480 }, { label: "960 GB", value: 960 }, { label: "1.92 TB", value: 1920 },
+      { label: "3.84 TB", value: 3840 }, { label: "7.68 TB", value: 7680 }
     ],
     nvme: [
-      { label: "256 GB", value: 256 }, { label: "512 GB", value: 512 }, { label: "1 TB", value: 1000 },
-      { label: "2 TB", value: 2000 }, { label: "4 TB", value: 4000 }, { label: "8 TB", value: 8000 }
+      { label: "512 GB", value: 512 }, { label: "1 TB", value: 1000 }, { label: "2 TB", value: 2000 },
+      { label: "4 TB", value: 4000 }, { label: "8 TB", value: 8000 }
     ],
     nl_sas: [
-      { label: "300 GB", value: 300 }, { label: "600 GB", value: 600 }, { label: "900 GB", value: 900 },
-      { label: "1.2 TB", value: 1200 }, { label: "1.8 TB", value: 1800 }, { label: "2 TB", value: 2000 },
-      { label: "2.4 TB", value: 2400 }, { label: "4 TB", value: 4000 }, { label: "6 TB", value: 6000 },
+      { label: "500 GB", value: 500 }, { label: "1 TB", value: 1000 }, { label: "2 TB", value: 2000 },
+      { label: "3 TB", value: 3000 }, { label: "4 TB", value: 4000 }, { label: "6 TB", value: 6000 },
       { label: "8 TB", value: 8000 }, { label: "10 TB", value: 10000 }, { label: "12 TB", value: 12000 },
       { label: "14 TB", value: 14000 }, { label: "16 TB", value: 16000 }, { label: "18 TB", value: 18000 },
       { label: "20 TB", value: 20000 }, { label: "22 TB", value: 22000 }, { label: "24 TB", value: 24000 },
-      { label: "26 TB", value: 26000 }
+      { label: "26 TB", value: 26000 }, { label: "28 TB", value: 28000 }, { label: "30 TB", value: 30000 }
     ],
     sas_ssd: [
-      { label: "400 GB", value: 400 }, { label: "800 GB", value: 800 }, { label: "960 GB", value: 960 },
-      { label: "1.6 TB", value: 1600 }, { label: "1.92 TB", value: 1920 }, { label: "3.2 TB", value: 3200 },
-      { label: "3.84 TB", value: 3840 }, { label: "6.4 TB", value: 6400 }, { label: "7.68 TB", value: 7680 },
-      { label: "12.8 TB", value: 12800 }, { label: "15.36 TB", value: 15360 }, { label: "30.72 TB", value: 30720 }
+      { label: "960 GB", value: 960 }, { label: "1.92 TB", value: 1920 }, { label: "3.84 TB", value: 3840 },
+      { label: "7.68 TB", value: 7680 }, { label: "15.36 TB", value: 15360 }
     ],
     u2_ssd: [
       { label: "960 GB", value: 960 }, { label: "1.92 TB", value: 1920 }, { label: "3.84 TB", value: 3840 },
@@ -362,13 +412,18 @@
     currentMode = mode;
     document.getElementById('tabForward').classList.toggle('active', mode === 'forward');
     document.getElementById('tabReverse').classList.toggle('active', mode === 'reverse');
+    document.getElementById('tabHybrid').classList.toggle('active', mode === 'hybrid');
 
-    document.getElementById('groupDriveSize').classList.toggle('hidden', mode === 'reverse');
-    document.getElementById('groupDriveCount').classList.toggle('hidden', mode === 'reverse');
+    document.getElementById('groupDriveType').classList.toggle('hidden', mode === 'hybrid');
+    document.getElementById('groupDriveSize').classList.toggle('hidden', mode !== 'forward');
+    document.getElementById('groupDriveCount').classList.toggle('hidden', mode !== 'forward');
     document.getElementById('groupTargetCapacity').classList.toggle('hidden', mode === 'forward');
+    document.getElementById('groupCachePercent').classList.toggle('hidden', mode !== 'hybrid');
+    document.getElementById('groupSplitBar').classList.toggle('hidden', mode !== 'hybrid');
 
-    document.getElementById('resultsForward').classList.toggle('hidden', mode === 'reverse');
-    document.getElementById('resultsReverse').classList.toggle('hidden', mode === 'forward');
+    document.getElementById('resultsForward').classList.toggle('hidden', mode !== 'forward');
+    document.getElementById('resultsReverse').classList.toggle('hidden', mode !== 'reverse');
+    document.getElementById('resultsHybrid').classList.toggle('hidden', mode !== 'hybrid');
 
     recalculate();
   }
@@ -383,9 +438,7 @@
       const option = document.createElement('option');
       option.value = opt.value;
       option.textContent = opt.label;
-      if (index === Math.floor(options.length / 2)) {
-        option.selected = true;
-      }
+      if (index === Math.floor(options.length / 2)) option.selected = true;
       sizeSelect.appendChild(option);
     });
 
@@ -393,11 +446,9 @@
   }
 
   function recalculate() {
-    if (currentMode === 'forward') {
-      calculateForwardRAID();
-    } else {
-      calculateReverseRAID();
-    }
+    if (currentMode === 'forward') calculateForwardRAID();
+    else if (currentMode === 'reverse') calculateReverseRAID();
+    else calculateHybridRAID();
   }
 
   function getMinDrivesAndOverhead(raidLevel, totalDrives) {
@@ -406,36 +457,13 @@
     let valid = true;
 
     switch (raidLevel) {
-      case '0':
-        overhead = 0;
-        minDrives = 1;
-        break;
-      case '1':
-        overhead = totalDrives / 2;
-        minDrives = 2;
-        if (totalDrives % 2 !== 0) valid = false;
-        break;
-      case '5':
-        overhead = 1;
-        minDrives = 3;
-        break;
-      case '6':
-        overhead = 2;
-        minDrives = 4;
-        break;
-      case '10':
-        overhead = totalDrives / 2;
-        minDrives = 4;
-        if (totalDrives % 2 !== 0) valid = false;
-        break;
-      case '50':
-        overhead = 2;
-        minDrives = 6;
-        break;
-      case '60':
-        overhead = 4;
-        minDrives = 8;
-        break;
+      case '0': overhead = 0; minDrives = 1; break;
+      case '1': overhead = totalDrives / 2; minDrives = 2; if (totalDrives % 2 !== 0) valid = false; break;
+      case '5': overhead = 1; minDrives = 3; break;
+      case '6': overhead = 2; minDrives = 4; break;
+      case '10': overhead = totalDrives / 2; minDrives = 4; if (totalDrives % 2 !== 0) valid = false; break;
+      case '50': overhead = 2; minDrives = 6; break;
+      case '60': overhead = 4; minDrives = 8; break;
     }
 
     if (totalDrives < minDrives) valid = false;
@@ -515,32 +543,99 @@
       item.className = 'rec-item';
       item.innerHTML = `
         <div>
-          <div class="rec-drive">${rec.driveLabel} Drive</div>
-          <div class="rec-usable">Usable: ${formatStorage(rec.usableGB)}</div>
+          <div style="font-weight:600;">${rec.driveLabel} Drive</div>
+          <div style="font-size:0.8rem; color:var(--text-muted);">Usable: ${formatStorage(rec.usableGB)}</div>
         </div>
         <div style="text-align: right;">
-          <div class="rec-qty">${rec.totalDrives} Drives</div>
-          <div class="rec-usable">${rec.dataDrives} Data + ${rec.totalDrives - rec.dataDrives} Redundancy/Spare</div>
+          <div style="color:var(--accent); font-weight:bold;">${rec.totalDrives} Drives</div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">${rec.dataDrives} Data + ${rec.totalDrives - rec.dataDrives} Spare/Raid</div>
         </div>
       `;
       listContainer.appendChild(item);
     });
   }
 
+  function calculateHybridRAID() {
+    const totalTargetTB = parseFloat(document.getElementById('targetCapacity').value) || 0;
+    const cachePct = parseFloat(document.getElementById('cachePercent').value) || 20;
+    const raidLevel = document.getElementById('raidLevel').value;
+    const hotSpares = parseInt(document.getElementById('hotSpares').value) || 0;
+
+    const dataPct = 100 - cachePct;
+    const cacheTargetTB = totalTargetTB * (cachePct / 100);
+    const dataTargetTB = totalTargetTB * (dataPct / 100);
+
+    // Update Split Visualizer
+    document.getElementById('hddTargetText').innerText = dataTargetTB.toFixed(1) + " TB";
+    document.getElementById('ssdTargetText').innerText = cacheTargetTB.toFixed(1) + " TB";
+    document.getElementById('barHdd').style.width = dataPct + "%";
+    document.getElementById('barHdd').innerText = dataPct + "% Data";
+    document.getElementById('barSsd').style.width = cachePct + "%";
+    document.getElementById('barSsd').innerText = cachePct + "% Cache";
+
+    document.getElementById('hybridHddRaidLabel').innerText = "RAID " + raidLevel;
+
+    // 1. Calculate All Options for NL-SAS HDD Data Tier
+    const hddSizes = capacityMappings['nl_sas'];
+    let hddHtml = '';
+
+    hddSizes.forEach(opt => {
+      const driveSizeGB = opt.value;
+      for (let count = 3; count <= 96; count++) {
+        const { overhead, valid } = getMinDrivesAndOverhead(raidLevel, count);
+        if (!valid) continue;
+        const dataDrives = count - overhead - hotSpares;
+        if (dataDrives <= 0) continue;
+
+        const usableGB = dataDrives * driveSizeGB * 0.9;
+        if (usableGB >= dataTargetTB * 1000) {
+          hddHtml += `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.08);">
+              <div><b>${opt.label} HDD</b> <span style="font-size:0.75rem; color:var(--text-muted);">(Usable: ${(usableGB/1000).toFixed(1)} TB)</span></div>
+              <div style="color:var(--accent-hdd); font-weight:bold;">${count} Drives <span style="font-size:0.75rem; color:var(--text-muted);">(${dataDrives} Data + ${count - dataDrives} Spare/Raid)</span></div>
+            </div>
+          `;
+          break;
+        }
+      }
+    });
+
+    document.getElementById('hybridHddResult').innerHTML = hddHtml || "No valid configuration found.";
+
+    // 2. Calculate All Options for U.2 SSD Cache Tier
+    const ssdSizes = capacityMappings['u2_ssd'];
+    let ssdHtml = '';
+
+    ssdSizes.forEach(opt => {
+      const driveSizeGB = opt.value;
+      for (let count = 2; count <= 24; count += 2) {
+        const usableGB = (count / 2) * driveSizeGB * 0.9;
+        if (usableGB >= cacheTargetTB * 1000) {
+          ssdHtml += `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.08);">
+              <div><b>${opt.label} SSD</b> <span style="font-size:0.75rem; color:var(--text-muted);">(Cache: ${(usableGB/1000).toFixed(1)} TB)</span></div>
+              <div style="color:var(--accent-ssd); font-weight:bold;">${count} Drives <span style="font-size:0.75rem; color:var(--text-muted);">(Mirroring)</span></div>
+            </div>
+          `;
+          break;
+        }
+      }
+    });
+
+    document.getElementById('hybridSsdResult').innerHTML = ssdHtml || "No valid configuration found.";
+  }
+
   function formatStorage(sizeInGB) {
-    if (sizeInGB >= 1000) {
-      return (sizeInGB / 1000).toFixed(2) + " TB";
-    }
+    if (sizeInGB >= 1000) return (sizeInGB / 1000).toFixed(2) + " TB";
     return sizeInGB.toFixed(0) + " GB";
   }
 
-  // Event Listeners
   document.getElementById('driveType').addEventListener('change', () => {
     updateCapacityDropdown();
     recalculate();
   });
 
-  ['driveSize', 'driveCount', 'targetCapacity', 'raidLevel', 'hotSpares'].forEach(id => {
+  ['driveSize', 'driveCount', 'targetCapacity', 'cachePercent', 'raidLevel', 'hotSpares'].forEach(id => {
     document.getElementById(id).addEventListener('change', recalculate);
     document.getElementById(id).addEventListener('input', recalculate);
   });
