@@ -209,7 +209,7 @@
     }
 
     .scrollable-list {
-      max-height: 200px;
+      max-height: 220px;
       overflow-y: auto;
       padding-right: 6px;
     }
@@ -235,6 +235,33 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 8px;
+      gap: 10px;
+    }
+
+    .rec-item-info {
+      flex: 1;
+    }
+
+    .rec-item-stats {
+      text-align: right;
+    }
+
+    .btn-item-copy {
+      background-color: rgba(56, 189, 248, 0.1);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    .btn-item-copy:hover {
+      background-color: var(--accent);
+      color: #0f172a;
     }
 
     .convert-grid {
@@ -264,6 +291,29 @@
       color: var(--accent);
     }
 
+    .copy-btn {
+      width: 100%;
+      margin-top: 16px;
+      padding: 12px;
+      background-color: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .copy-btn:hover {
+      background-color: var(--accent);
+      color: #0f172a;
+    }
+
     .hidden { display: none; }
 
     .note {
@@ -279,6 +329,9 @@
       .calculator-card { padding: 18px; }
       .tab-btn { font-size: 0.68rem; padding: 8px 2px; }
       .convert-grid { grid-template-columns: 1fr; }
+      .rec-item { flex-direction: column; align-items: flex-start; }
+      .rec-item-stats { text-align: left; margin-top: 4px; }
+      .btn-item-copy { width: 100%; margin-top: 6px; }
     }
   </style>
 </head>
@@ -322,12 +375,27 @@
   </div>
 
   <div class="form-group" id="groupDriveCount">
-    <label for="driveCount">Number of Drives</label>
-    <input type="number" id="driveCount" value="8" min="1" max="128">
+    <label for="driveCount" id="labelDriveCount">Total Number of Drives</label>
+    <input type="number" id="driveCount" value="16" min="1" max="256">
+  </div>
+
+  <!-- Enclosures / RAID Groups Dropdown -->
+  <div class="form-group" id="groupEnclosures">
+    <label for="enclosureCount">Number of Units / RAID Groups</label>
+    <select id="enclosureCount">
+      <option value="1" selected>1 Unit (Standalone Main Unit)</option>
+      <option value="2">2 Units (Main + 1 Expansion Unit)</option>
+      <option value="3">3 Units (Main + 2 Expansion Units)</option>
+      <option value="4">4 Units (Main + 3 Expansion Units)</option>
+      <option value="5">5 Units (Main + 4 Expansion Units)</option>
+      <option value="6">6 Units (Main + 5 Expansion Units)</option>
+      <option value="7">7 Units (Main + 6 Expansion Units)</option>
+      <option value="8">8 Units (Main + 7 Expansion Units)</option>
+    </select>
   </div>
 
   <div class="form-group hidden" id="groupTargetCapacity">
-    <label for="targetCapacity">Target Usable Capacity (TB)</label>
+    <label for="targetCapacity">Total Target Usable Capacity (TB)</label>
     <input type="number" id="targetCapacity" value="50" min="1" step="1">
   </div>
 
@@ -364,7 +432,7 @@
 
   <!-- RAID Level & Spares -->
   <div class="form-group" id="groupRaidLevel">
-    <label for="raidLevel">RAID Level</label>
+    <label for="raidLevel">RAID Level (Per Unit / Group)</label>
     <select id="raidLevel">
       <option value="0">RAID 0 (Striping - No Redundancy)</option>
       <option value="1">RAID 1 (Mirroring)</option>
@@ -377,19 +445,23 @@
   </div>
 
   <div class="form-group" id="groupHotSpares">
-    <label for="hotSpares">Hot Spares</label>
+    <label for="hotSpares">Hot Spares (Per Unit / Group)</label>
     <input type="number" id="hotSpares" value="0" min="0" max="10">
   </div>
 
   <!-- Mode 1 Results -->
   <div class="results" id="resultsForward">
     <div class="result-row">
-      <span class="result-label">Raw Storage:</span>
+      <span class="result-label">Total Raw Storage:</span>
       <span class="result-value" id="rawCapacity">0 TB</span>
     </div>
     <div class="result-row">
-      <span class="result-label">Usable Capacity (0.9x):</span>
+      <span class="result-label">Total Usable Capacity (0.9x):</span>
       <span class="result-value" id="usableCapacity">0 TB</span>
+    </div>
+    <div class="result-row" style="margin-top: 12px; font-size:0.85rem; color:var(--text-muted);">
+      <span>Configuration Breakout:</span>
+      <span id="forwardBreakout" style="color:var(--text);">0 Drives Total across 1 Unit</span>
     </div>
   </div>
 
@@ -448,7 +520,12 @@
     </div>
   </div>
 
-  <p class="note" id="calcNote">Usable Capacity Formula: <code>(Data Drives) * Drive Size * 0.9 Factor</code></p>
+  <!-- Copy Button -->
+  <button class="copy-btn" id="btnCopyEmail" onclick="copyEmailSummary()">
+    <span>📋 Copy All Calculations for Email</span>
+  </button>
+
+  <p class="note" id="calcNote">Usable Capacity Formula: <code>Total Usable = Enclosures * (Data Drives per Unit * Drive Size * 0.9 Factor)</code></p>
 </div>
 
 <script>
@@ -508,6 +585,7 @@
     document.getElementById('groupDriveType').classList.toggle('hidden', mode === 'hybrid' || isConverter);
     document.getElementById('groupDriveSize').classList.toggle('hidden', mode !== 'forward');
     document.getElementById('groupDriveCount').classList.toggle('hidden', mode !== 'forward');
+    document.getElementById('groupEnclosures').classList.toggle('hidden', isConverter);
     document.getElementById('groupTargetCapacity').classList.toggle('hidden', mode === 'forward' || isConverter);
     document.getElementById('groupCachePercent').classList.toggle('hidden', mode !== 'hybrid');
     document.getElementById('groupSplitBar').classList.toggle('hidden', mode !== 'hybrid');
@@ -520,6 +598,7 @@
     document.getElementById('resultsHybrid').classList.toggle('hidden', mode !== 'hybrid');
     document.getElementById('resultsConverter').classList.toggle('hidden', !isConverter);
 
+    document.getElementById('btnCopyEmail').classList.toggle('hidden', isConverter);
     document.getElementById('calcNote').classList.toggle('hidden', isConverter);
 
     recalculate();
@@ -570,32 +649,47 @@
 
   function calculateForwardRAID() {
     const driveSize = parseFloat(document.getElementById('driveSize').value) || 0;
-    const driveCount = parseInt(document.getElementById('driveCount').value) || 0;
+    const totalDrivesInput = parseInt(document.getElementById('driveCount').value) || 0;
+    const enclosures = parseInt(document.getElementById('enclosureCount').value) || 1;
     const raidLevel = document.getElementById('raidLevel').value;
-    const hotSpares = parseInt(document.getElementById('hotSpares').value) || 0;
+    const hotSparesPerUnit = parseInt(document.getElementById('hotSpares').value) || 0;
 
-    const { overhead, valid } = getMinDrivesAndOverhead(raidLevel, driveCount);
-    const availableDrives = driveCount - overhead - hotSpares;
-
-    if (!valid || availableDrives <= 0) {
+    if (totalDrivesInput <= 0 || totalDrivesInput % enclosures !== 0) {
       document.getElementById('rawCapacity').innerText = "Invalid Config";
       document.getElementById('usableCapacity').innerText = "Invalid Config";
+      document.getElementById('forwardBreakout').innerText = `Total drives (${totalDrivesInput}) cannot be evenly split into ${enclosures} unit(s).`;
       return;
     }
 
-    const rawGB = driveCount * driveSize;
-    const usableGB = availableDrives * driveSize * 0.9;
+    const driveCountPerUnit = totalDrivesInput / enclosures;
+    const { overhead, valid } = getMinDrivesAndOverhead(raidLevel, driveCountPerUnit);
+    const availableDrivesPerUnit = driveCountPerUnit - overhead - hotSparesPerUnit;
+
+    if (!valid || availableDrivesPerUnit <= 0) {
+      document.getElementById('rawCapacity').innerText = "Invalid Config";
+      document.getElementById('usableCapacity').innerText = "Invalid Config";
+      document.getElementById('forwardBreakout').innerText = `Invalid configuration: ${driveCountPerUnit} drives per unit is not enough for RAID ${raidLevel} + ${hotSparesPerUnit} hot spare(s).`;
+      return;
+    }
+
+    const rawGB = totalDrivesInput * driveSize;
+    const usableGBPerUnit = availableDrivesPerUnit * driveSize * 0.9;
+    const totalUsableGB = usableGBPerUnit * enclosures;
 
     document.getElementById('rawCapacity').innerText = formatStorage(rawGB);
-    document.getElementById('usableCapacity').innerText = formatStorage(usableGB);
+    document.getElementById('usableCapacity').innerText = formatStorage(totalUsableGB);
+    document.getElementById('forwardBreakout').innerText = `${totalDrivesInput} Total Drives divided into ${enclosures} Unit(s) (${driveCountPerUnit} drives/unit)`;
   }
 
   function calculateReverseRAID() {
     const selectedType = document.getElementById('driveType').value;
     const targetUsableTB = parseFloat(document.getElementById('targetCapacity').value) || 0;
-    const targetUsableGB = targetUsableTB * 1000;
+    const enclosures = parseInt(document.getElementById('enclosureCount').value) || 1;
+    
+    const targetUsableGBPerUnit = (targetUsableTB * 1000) / enclosures;
+    
     const raidLevel = document.getElementById('raidLevel').value;
-    const hotSpares = parseInt(document.getElementById('hotSpares').value) || 0;
+    const hotSparesPerUnit = parseInt(document.getElementById('hotSpares').value) || 0;
 
     const listContainer = document.getElementById('recommendationsList');
     listContainer.innerHTML = '';
@@ -614,16 +708,19 @@
         const { overhead, valid } = getMinDrivesAndOverhead(raidLevel, driveCount);
         if (!valid) continue;
 
-        const dataDrives = driveCount - overhead - hotSpares;
-        if (dataDrives <= 0) continue;
+        const dataDrivesPerUnit = driveCount - overhead - hotSparesPerUnit;
+        if (dataDrivesPerUnit <= 0) continue;
 
-        const usableGB = dataDrives * driveSize * 0.9;
-        if (usableGB >= targetUsableGB) {
+        const usableGBPerUnit = dataDrivesPerUnit * driveSize * 0.9;
+        if (usableGBPerUnit >= targetUsableGBPerUnit) {
+          const totalUsableGB = usableGBPerUnit * enclosures;
+          const totalDrives = driveCount * enclosures;
           recommendations.push({
             driveLabel: opt.label,
-            totalDrives: driveCount,
-            dataDrives: dataDrives,
-            usableGB: usableGB
+            drivesPerUnit: driveCount,
+            totalDrives: totalDrives,
+            dataDrivesPerUnit: dataDrivesPerUnit,
+            usableGB: totalUsableGB
           });
           break;
         }
@@ -631,22 +728,30 @@
     });
 
     if (recommendations.length === 0) {
-      listContainer.innerHTML = '<div class="rec-item">No valid configuration found.</div>';
+      listContainer.innerHTML = '<div class="rec-item">No valid configuration found for this target across the selected unit count.</div>';
       return;
     }
 
     recommendations.forEach(rec => {
       const item = document.createElement('div');
       item.className = 'rec-item';
+      
+      const usableFormatted = formatStorage(rec.usableGB);
+      const driveTypeSel = document.getElementById('driveType');
+      const driveTypeName = driveTypeSel.options[driveTypeSel.selectedIndex].text;
+
       item.innerHTML = `
-        <div>
-          <div style="font-weight:600;">${rec.driveLabel} Drive</div>
-          <div style="font-size:0.8rem; color:var(--text-muted);">Usable: ${formatStorage(rec.usableGB)}</div>
+        <div class="rec-item-info">
+          <div style="font-weight:600;">${rec.driveLabel} Drive (${driveTypeName})</div>
+          <div style="font-size:0.8rem; color:var(--text-muted);">Total Usable: ${usableFormatted}</div>
         </div>
-        <div style="text-align: right;">
-          <div style="color:var(--accent); font-weight:bold;">${rec.totalDrives} Drives</div>
-          <div style="font-size:0.75rem; color:var(--text-muted);">${rec.dataDrives} Data + ${rec.totalDrives - rec.dataDrives} Spare/Raid</div>
+        <div class="rec-item-stats">
+          <div style="color:var(--accent); font-weight:bold;">${rec.totalDrives} Drives Total</div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">${rec.drivesPerUnit} Drives x ${enclosures} Unit(s)</div>
         </div>
+        <button class="btn-item-copy" onclick="copySingleDriveOption('${rec.driveLabel}', '${driveTypeName}', ${rec.totalDrives}, ${rec.drivesPerUnit}, ${enclosures}, 'RAID ${raidLevel}', '${usableFormatted}')">
+          📋 Copy Option
+        </button>
       `;
       listContainer.appendChild(item);
     });
@@ -655,12 +760,16 @@
   function calculateHybridRAID() {
     const totalTargetTB = parseFloat(document.getElementById('targetCapacity').value) || 0;
     const cachePct = parseFloat(document.getElementById('cachePercent').value) || 20;
+    const enclosures = parseInt(document.getElementById('enclosureCount').value) || 1;
     const raidLevel = document.getElementById('raidLevel').value;
-    const hotSpares = parseInt(document.getElementById('hotSpares').value) || 0;
+    const hotSparesPerUnit = parseInt(document.getElementById('hotSpares').value) || 0;
 
     const dataPct = 100 - cachePct;
     const cacheTargetTB = totalTargetTB * (cachePct / 100);
     const dataTargetTB = totalTargetTB * (dataPct / 100);
+
+    const dataTargetGBPerUnit = (dataTargetTB * 1000) / enclosures;
+    const cacheTargetGBPerUnit = (cacheTargetTB * 1000) / enclosures;
 
     document.getElementById('hddTargetText').innerText = dataTargetTB.toFixed(1) + " TB";
     document.getElementById('ssdTargetText').innerText = cacheTargetTB.toFixed(1) + " TB";
@@ -680,15 +789,28 @@
       for (let count = 3; count <= 96; count++) {
         const { overhead, valid } = getMinDrivesAndOverhead(raidLevel, count);
         if (!valid) continue;
-        const dataDrives = count - overhead - hotSpares;
+        const dataDrives = count - overhead - hotSparesPerUnit;
         if (dataDrives <= 0) continue;
 
-        const usableGB = dataDrives * driveSizeGB * 0.9;
-        if (usableGB >= dataTargetTB * 1000) {
+        const usableGBPerUnit = dataDrives * driveSizeGB * 0.9;
+        if (usableGBPerUnit >= dataTargetGBPerUnit) {
+          const totalHddDrives = count * enclosures;
+          const totalUsableHdd = usableGBPerUnit * enclosures;
+          const formattedUsable = (totalUsableHdd/1000).toFixed(1) + " TB";
+
           hddHtml += `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">
-              <div><b>${opt.label} HDD</b> <span style="font-size:0.75rem; color:var(--text-muted);">(Usable: ${(usableGB/1000).toFixed(1)} TB)</span></div>
-              <div style="color:var(--accent-hdd); font-weight:bold;">${count} Drives</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); gap:8px;">
+              <div>
+                <b>${opt.label} HDD</b> 
+                <div style="font-size:0.75rem; color:var(--text-muted);">Usable: ${formattedUsable}</div>
+              </div>
+              <div style="color:var(--accent-hdd); font-weight:bold; text-align:right;">
+                ${totalHddDrives} Drives Total<br>
+                <span style="font-size:0.75rem; font-weight:normal; color:var(--text-muted);">${count} per unit (${enclosures} units)</span>
+              </div>
+              <button class="btn-item-copy" onclick="copySingleDriveOption('${opt.label}', 'NL-SAS HDD', ${totalHddDrives}, ${count}, ${enclosures}, 'RAID ${raidLevel}', '${formattedUsable}')">
+                📋 Copy
+              </button>
             </div>
           `;
           break;
@@ -705,12 +827,25 @@
     ssdSizes.forEach(opt => {
       const driveSizeGB = opt.value;
       for (let count = 2; count <= 24; count += 2) {
-        const usableGB = (count / 2) * driveSizeGB * 0.9;
-        if (usableGB >= cacheTargetTB * 1000) {
+        const usableGBPerUnit = (count / 2) * driveSizeGB * 0.9;
+        if (usableGBPerUnit >= cacheTargetGBPerUnit) {
+          const totalSsdDrives = count * enclosures;
+          const totalUsableSsd = usableGBPerUnit * enclosures;
+          const formattedUsable = (totalUsableSsd/1000).toFixed(1) + " TB";
+
           ssdHtml += `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">
-              <div><b>${opt.label} SSD</b> <span style="font-size:0.75rem; color:var(--text-muted);">(Cache: ${(usableGB/1000).toFixed(1)} TB)</span></div>
-              <div style="color:var(--accent-ssd); font-weight:bold;">${count} Drives</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); gap:8px;">
+              <div>
+                <b>${opt.label} SSD</b> 
+                <div style="font-size:0.75rem; color:var(--text-muted);">Cache: ${formattedUsable}</div>
+              </div>
+              <div style="color:var(--accent-ssd); font-weight:bold; text-align:right;">
+                ${totalSsdDrives} Drives Total<br>
+                <span style="font-size:0.75rem; font-weight:normal; color:var(--text-muted);">${count} per unit (${enclosures} units)</span>
+              </div>
+              <button class="btn-item-copy" onclick="copySingleDriveOption('${opt.label}', 'U.2 SSD', ${totalSsdDrives}, ${count}, ${enclosures}, 'RAID 1/10 Mirror', '${formattedUsable}')">
+                📋 Copy
+              </button>
             </div>
           `;
           break;
@@ -721,14 +856,11 @@
     document.getElementById('hybridSsdResult').innerHTML = ssdHtml || "No valid configuration found.";
   }
 
-  // Unit Converter Calculation Logic
   function calculateUnitConverter() {
     const val = parseFloat(document.getElementById('convertValue').value) || 0;
     const unit = document.getElementById('convertUnit').value;
 
     let bytes = 0;
-
-    // Standard Base-10 Bytes
     switch(unit) {
       case 'MB': bytes = val * 1e6; break;
       case 'GB': bytes = val * 1e9; break;
@@ -740,8 +872,6 @@
     const gb = bytes / 1e9;
     const tb = bytes / 1e12;
     const pb = bytes / 1e15;
-
-    // Binary Conversion for OS usable space (1 TiB = 1,099,511,627,776 bytes)
     const tib = bytes / 1099511627776;
 
     document.getElementById('valPB').innerText = pb < 0.0001 && pb > 0 ? pb.toExponential(2) + " PB" : pb.toLocaleString(undefined, {maximumFractionDigits: 4}) + " PB";
@@ -756,12 +886,128 @@
     return sizeInGB.toFixed(0) + " GB";
   }
 
+  // Copy Single Specific Drive Option
+  function copySingleDriveOption(driveSize, driveType, totalDrives, drivesPerUnit, enclosures, raidConfig, usableCap) {
+    const targetCap = document.getElementById('targetCapacity').value;
+    const hotSpares = document.getElementById('hotSpares').value;
+
+    let singleOptionText = `STORAGE DRIVE CONFIGURATION OPTION\n`;
+    singleOptionText += `=================================\n`;
+    singleOptionText += `Target Usable Capacity: ${targetCap} TB\n`;
+    singleOptionText += `Selected Drive Size: ${driveSize}\n`;
+    singleOptionText += `Drive Type: ${driveType}\n`;
+    singleOptionText += `Total Drives Required: ${totalDrives} Drives\n`;
+    singleOptionText += `Breakout: ${drivesPerUnit} drives/unit across ${enclosures} unit(s)\n`;
+    singleOptionText += `RAID Configuration: ${raidConfig}\n`;
+    singleOptionText += `Hot Spares (per unit): ${hotSpares}\n`;
+    singleOptionText += `Calculated Usable Storage: ${usableCap}\n`;
+    singleOptionText += `=================================\n`;
+
+    navigator.clipboard.writeText(singleOptionText).then(() => {
+      alert(`Copied Details for ${driveSize} ${driveType} option!`);
+    }).catch(err => {
+      alert("Failed to copy details.");
+    });
+  }
+
+  // Copy Summary Function for Email
+  function copyEmailSummary() {
+    let emailText = "STORAGE CALCULATION SUMMARY\n";
+    emailText += "============================\n\n";
+
+    const driveTypeSel = document.getElementById('driveType');
+    const driveTypeName = driveTypeSel.options[driveTypeSel.selectedIndex].text;
+    const raidLevel = document.getElementById('raidLevel').value;
+    const enclosures = document.getElementById('enclosureCount').value;
+    const hotSpares = document.getElementById('hotSpares').value;
+
+    if (currentMode === 'forward') {
+      const driveSizeSel = document.getElementById('driveSize');
+      const driveSizeLabel = driveSizeSel.options[driveSizeSel.selectedIndex].text;
+      const totalDrives = document.getElementById('driveCount').value;
+      const raw = document.getElementById('rawCapacity').innerText;
+      const usable = document.getElementById('usableCapacity').innerText;
+      const breakout = document.getElementById('forwardBreakout').innerText;
+
+      emailText += `Calculation Mode: Usable Capacity\n`;
+      emailText += `Drive Type: ${driveTypeName}\n`;
+      emailText += `Drive Size: ${driveSizeLabel}\n`;
+      emailText += `Total Drives: ${totalDrives}\n`;
+      emailText += `Units / RAID Groups: ${enclosures}\n`;
+      emailText += `RAID Level: RAID ${raidLevel}\n`;
+      emailText += `Hot Spares (per unit): ${hotSpares}\n\n`;
+      emailText += `--- RESULTS ---\n`;
+      emailText += `Total Raw Storage: ${raw}\n`;
+      emailText += `Total Usable Storage (0.9x): ${usable}\n`;
+      emailText += `Configuration: ${breakout}\n`;
+
+    } else if (currentMode === 'reverse') {
+      const target = document.getElementById('targetCapacity').value;
+      emailText += `Calculation Mode: Required Drives Selection\n`;
+      emailText += `Target Usable Capacity: ${target} TB\n`;
+      emailText += `Drive Type: ${driveTypeName}\n`;
+      emailText += `Units / RAID Groups: ${enclosures}\n`;
+      emailText += `RAID Level: RAID ${raidLevel}\n`;
+      emailText += `Hot Spares (per unit): ${hotSpares}\n\n`;
+      emailText += `--- RECOMMENDED CONFIGURATIONS ---\n`;
+
+      const recItems = document.querySelectorAll('#recommendationsList .rec-item');
+      if (recItems.length === 0) {
+        emailText += `No valid configuration found.\n`;
+      } else {
+        recItems.forEach(item => {
+          const info = item.querySelector('.rec-item-info').innerText.replace(/\n/g, ' - ');
+          const stats = item.querySelector('.rec-item-stats').innerText.replace(/\n/g, ' - ');
+          emailText += `• ${info} | ${stats}\n`;
+        });
+      }
+
+    } else if (currentMode === 'hybrid') {
+      const target = document.getElementById('targetCapacity').value;
+      const cachePct = document.getElementById('cachePercent').value;
+      const dataPct = 100 - cachePct;
+
+      emailText += `Calculation Mode: Hybrid Cache Setup\n`;
+      emailText += `Total Target Usable Capacity: ${target} TB\n`;
+      emailText += `Tier Split: ${dataPct}% Bulk Data / ${cachePct}% Cache\n`;
+      emailText += `Units / RAID Groups: ${enclosures}\n`;
+      emailText += `Bulk Tier RAID Level: RAID ${raidLevel}\n`;
+      emailText += `Hot Spares (per unit): ${hotSpares}\n\n`;
+      emailText += `--- RECOMMENDED HYBRID CONFIGURATIONS ---\n`;
+      emailText += `[Bulk Data Options - NL-SAS HDD]\n`;
+
+      const hddRows = document.querySelectorAll('#hybridHddResult > div');
+      hddRows.forEach(row => {
+        emailText += `• ${row.innerText.replace(/\n/g, ' ')}\n`;
+      });
+
+      emailText += `\n[Cache Options - U.2 SSD (RAID 1/10 Mirror)]\n`;
+      const ssdRows = document.querySelectorAll('#hybridSsdResult > div');
+      ssdRows.forEach(row => {
+        emailText += `• ${row.innerText.replace(/\n/g, ' ')}\n`;
+      });
+    }
+
+    emailText += "\n============================\nGenerated via Storage Calculator";
+
+    navigator.clipboard.writeText(emailText).then(() => {
+      const copyBtn = document.getElementById('btnCopyEmail');
+      const origText = copyBtn.innerHTML;
+      copyBtn.innerHTML = "<span>✅ Copied to Clipboard!</span>";
+      setTimeout(() => {
+        copyBtn.innerHTML = origText;
+      }, 2000);
+    }).catch(err => {
+      alert("Failed to copy. Please try manually.");
+    });
+  }
+
   document.getElementById('driveType').addEventListener('change', () => {
     updateCapacityDropdown();
     recalculate();
   });
 
-  ['driveSize', 'driveCount', 'targetCapacity', 'cachePercent', 'raidLevel', 'hotSpares', 'convertValue', 'convertUnit'].forEach(id => {
+  ['driveSize', 'driveCount', 'enclosureCount', 'targetCapacity', 'cachePercent', 'raidLevel', 'hotSpares', 'convertValue', 'convertUnit'].forEach(id => {
     document.getElementById(id).addEventListener('change', recalculate);
     document.getElementById(id).addEventListener('input', recalculate);
   });
